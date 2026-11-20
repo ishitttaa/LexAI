@@ -1,0 +1,25 @@
+
+# ── Core Framework ──
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-dotenv>=1.0.1
+python-multipart>=0.0.9
+httpx>=0.27.0
+pydantic>=2.7.1
+
+# ── Groq LLM ──
+groq>=0.9.0
+
+# ── Embedding Similarity (Method A) ──
+sentence-transformers>=3.0.0
+numpy>=2.0.0
+
+# ── Audit Trail Storage ──
+aiosqlite>=0.20.0
+pandas>=2.2.0
+
+# ── Static File Serving ──
+aiofiles>=23.2.1
+
+# ── PDF Parsing ──
+pypdf>=4.0.0

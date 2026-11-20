@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Galileo-Style Hallucination Audit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=2">
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+</head>
+<body>
+
+  <!-- BG Orbs -->
+  <div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🔍</div>
+        <span class="logo-text">AuditTrail<span class="logo-accent">.ai</span></span>
+      </div>
+      <div class="header-tabs">
+        <button class="tab-btn active" data-tab="tab-qa">QA Evaluator (New)</button>
+        <button class="tab-btn" data-tab="tab-doc">Document Auditor</button>
+        <button class="tab-btn" data-tab="tab-signals">Signals & Audit Trail</button>
+      </div>
+      <div class="header-badge">⚡ Powered by Groq (LLaMA 3.3)</div>
+    </div>
+  </header>
+
+  <main class="main">
+    
+    <!-- ── TAB 1: QA EVALUATOR ── -->
+    <div id="tab-qa" class="tab-pane active">
+      <div class="hero">
+        <h1 class="hero-title">Real-time <span class="gradient-text">Hallucination Detection</span></h1>
+        <p class="hero-subtitle">Enter a question and an LLM answer — the system <strong>automatically searches the web</strong> for ground-truth context and evaluates using 4 parallel methods.</p>
+      </div>
+
+      <div class="card qa-input-card">
+        <div class="qa-grid">
+          <div class="qa-col">
+            <label>Question</label>
+            <textarea id="qa-question" placeholder="e.g. What is the capital of Australia?"></textarea>
+          </div>
+          <div class="qa-col">
+            <label>Topic (Optional)</label>
+            <input type="text" id="qa-topic" placeholder="e.g. Geography">
+          </div>
+        </div>
+
+        <label>LLM Answer <span style="color:var(--text-muted); font-weight:400;">(the answer you want to fact-check)</span></label>
+        <textarea id="qa-answer" style="height:90px" placeholder="Paste the LLM's answer here..."></textarea>
+
+        <!-- Advanced: Custom Context Toggle -->
+        <div class="ctx-toggle-row">
+          <button class="ctx-toggle-btn" id="btn-ctx-toggle" onclick="toggleCustomContext()">
+            ⚙️ Advanced: Use Custom Context instead of auto-fetch
+          </button>
+        </div>
+        <div id="custom-context-wrap" class="hidden">
+          <label>Custom Context <span style="color:var(--text-muted); font-weight:400;">(leave blank to auto-fetch from Google)</span></label>
+          <textarea id="qa-context" style="height:110px" placeholder="Paste your own reference context here, or leave blank to auto-fetch from the web..."></textarea>
+        </div>
+
+        <div class="input-footer mt-4">
+          <button class="btn-ghost" id="btn-qa-demo">Load Demo</button>
+          <button class="btn-primary" id="btn-qa-audit">🔍 Run QA Evaluation</button>
+        </div>
+      </div>
+
+      <!-- QA Results -->
+      <div id="qa-results" class="hidden mt-6">
+        <!-- Context Sources Panel (shown only when auto-fetched) -->
+        <div id="qa-context-sources" class="hidden context-sources-panel mb-4">
+          <div class="context-sources-header">
+            <span>🌐 Ground-Truth Sources Auto-Fetched from Web</span>
+            <button class="btn-ghost" style="font-size:0.8rem; padding:4px 10px;" onclick="document.getElementById('qa-fetched-context-wrap').classList.toggle('hidden')">Toggle Context</button>
+          </div>
+          <div id="qa-source-links" class="context-source-links"></div>
+          <div id="qa-fetched-context-wrap" class="hidden">
+            <div class="fetched-context-box" id="qa-fetched-context-text"></div>
+          </div>
+        </div>
+
+        <div class="summary-bar">
+          <div class="summary-stat">
+            <div class="stat-value" id="qa-val-score">0.00</div>
+            <div class="stat-label">Ensemble Hallucination Score</div>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-stat">
+            <div class="stat-value" id="qa-val-verdict">VERIFIED</div>
+            <div class="stat-label">Final Verdict</div>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-stat">
+            <div class="stat-value" id="qa-val-time">0ms</div>
+            <div class="stat-label">Processing Time</div>
+          </div>
+        </div>
+
+        <div class="method-grid mt-6">
+          <!-- Method Cards will be injected here by JS -->
+          <div id="method-cards-container" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;"></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TAB 2: DOCUMENT AUDITOR ── -->
+    <div id="tab-doc" class="tab-pane">
+      <div class="hero">
+        <h1 class="hero-title">Document <span class="gradient-text">Auditor</span></h1>
+        <p class="hero-subtitle">Paste a document to extract and verify factual claims against Google Search.</p>
+      </div>
+
+      <div class="card">
+        <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+          <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;" />
+          <button class="btn-ghost" onclick="document.getElementById('pdf-upload').click()">📄 Upload PDF</button>
+          <span id="pdf-upload-status" style="font-size: 0.9rem; color: var(--text-muted);"></span>
+        </div>
+        <textarea id="doc-input" class="doc-textarea" placeholder="Paste document here or upload a PDF above..."></textarea>
+        <div class="input-footer">
+          <button class="btn-primary" id="btn-doc-audit">Run Document Audit</button>
+        </div>
+      </div>
+
+      <div id="doc-results" class="hidden mt-6">
+        <div class="results-grid">
+          <div class="card annotated-card">
+            <div class="card-header">Annotated Document</div>
+            <div id="annotated-doc" class="annotated-doc"></div>
+          </div>
+          <div class="claims-sidebar">
+            <div class="card sidebar-card">
+              <div class="card-header">Claims Breakdown</div>
+              <div id="claims-list" class="claims-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TAB 3: SIGNALS & AUDIT TRAIL ── -->
+    <div id="tab-signals" class="tab-pane">
+      <div class="hero">
+        <h1 class="hero-title">Signals & <span class="gradient-text">Audit Trail</span></h1>
+        <p class="hero-subtitle">Automated root cause analysis and historical evaluation logs.</p>
+      </div>
+
+      <!-- Signals Dashboard -->
+      <div class="signals-grid">
+        <div class="card p-5">
+          <h3 class="mb-4 text-accent">⚠️ Active Failure Signals</h3>
+          <div id="signals-container" class="signals-list">
+            <!-- Signals injected here -->
+          </div>
+        </div>
+        
+        <div class="card p-5">
+          <h3 class="mb-4">Score Distribution</h3>
+          <div id="chart-distribution" style="height: 250px;"></div>
+        </div>
+      </div>
+
+      <!-- Audit Table -->
+      <div class="card mt-6">
+        <div class="card-header flex-between">
+          <span>Audit History</span>
+          <button class="btn-ghost" id="btn-refresh-trail">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Time</th>
+                <th>Topic</th>
+                <th>Question Preview</th>
+                <th>Ensemble Score</th>
+                <th>Verdict</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody">
+              <!-- Rows injected here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+  
+  <script src="/static/app.js?v=2"></script>
+</body>
+</html>
